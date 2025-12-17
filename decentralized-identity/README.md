@@ -1,135 +1,340 @@
-# 🆔 Decentralized Identity Smart Contract
+# 🆔 Decentralized Identity (DID) for Cardano
 
-A blockchain-based identity management system built on Cardano, implementing self-sovereign identity with identity addresses, ownership control, and delegate management based on EIP 1056.
+A production-ready implementation of EIP-1056 style Decentralized Identity management on Cardano, leveraging the UTXO model for secure, self-sovereign identity control.
 
-## 🌟 What is Decentralized Identity?
+> **📋 Implementation Status**: ✅ Complete
+> **📄 See Also**: [Implementation Plan](./IMPLEMENTATION_PLAN.md) | [Architecture Diagrams](./ARCHITECTURE_DIAGRAMS.md) | [On-chain README](./onchain/aiken/README.md)
 
-Traditional identity systems rely on centralized authorities and intermediaries for identity verification:
-- Identity verification depends on trusted third parties
-- Users have limited control over their identity data
-- Identity management is fragmented across multiple platforms
-- No standardized way to prove identity across different systems
-- Centralized points of failure compromise identity security
+## Table of Contents
 
-Decentralized identity enables **self-sovereign identity** where blockchain addresses serve as identities, users control ownership through cryptographic signatures, and delegates can be authorized for specific time periods without compromising core identity control.
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Smart Contracts](#smart-contracts)
+- [Off-chain Implementations](#off-chain-implementations)
+- [Getting Started](#getting-started)
+- [API Reference](#api-reference)
+- [Security Considerations](#security-considerations)
+- [Testing](#testing)
+
+## Overview
+
+This project implements a Decentralized Identity (DID) system on Cardano, inspired by [EIP-1056](https://eips.ethereum.org/EIPS/eip-1056) (Ethereum's ERC-1056 Lightweight Identity). The implementation adapts the account-based identity model to Cardano's UTXO model, providing:
+
+- **Self-Sovereign Identity**: Users maintain full control over their identity
+- **Delegate Management**: Grant and revoke authorization to other addresses
+- **Attribute Storage**: Store and manage identity attributes on-chain
+- **NFT-based Identity**: Unique, non-fungible tokens represent identity ownership
+- **Time-based Validity**: Delegates and attributes can have expiration times
+
+### EIP-1056 on Cardano
+
+| EIP-1056 Concept   | Cardano Implementation                                |
+| ------------------ | ----------------------------------------------------- |
+| Identity (address) | Public key hash stored in datum                       |
+| Owner              | Current owner's public key hash in datum              |
+| Delegates          | List of delegate records with types and validity      |
+| Attributes         | Key-value pairs with validity timestamps              |
+| Change events      | UTXO datum transitions (queryable via chain indexers) |
 
 ## 💎 Key Benefits
 
 ### 🔒 **Self-Sovereign Control**
+
 - Blockchain addresses serve as unique identities
 - Cryptographic signatures prove ownership and authorization
 - No reliance on centralized identity providers
 - Direct control over identity management decisions
 
 ### 🌐 **Delegate Management**
+
 - Temporary delegates can be authorized for specific privileges
 - Time-limited delegate permissions with automatic expiration
 - Flexible delegation without compromising core ownership
 - Block-based validity periods for precise control
 
 ### 🔍 **Ownership Transfer**
+
 - Identity ownership can be transferred through signed transactions
 - Cryptographic proof of ownership changes
 - Secure handover of identity control to new owners
 - Maintained identity continuity across ownership changes
 
 ### ⚖️ **Decentralized Verification**
-- Message hashing and signature verification for authentication
+
 - No central authority required for identity validation
 - Transparent and verifiable identity operations
 - Blockchain-based audit trail for all identity actions
 
 ## 🏗️ Architecture Overview
 
-### Address-Based Identity Design
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Decentralized Identity                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐         ┌──────────────────────────────────┐  │
+│  │  Identity    │  mints  │        Identity UTXO              │  │
+│  │  NFT Policy  │────────▶│  ┌────────────────────────────┐  │  │
+│  │              │         │  │      Identity Datum         │  │  │
+│  │  • One-shot  │         │  │  • identity: ByteArray      │  │  │
+│  │  • Unique    │         │  │  • owner: ByteArray         │  │  │
+│  └──────────────┘         │  │  • delegates: List          │  │  │
+│                           │  │  • attributes: List         │  │  │
+│                           │  │  • nonce: Int               │  │  │
+│                           │  └────────────────────────────┘  │  │
+│                           │                                    │  │
+│                           │  + Identity NFT (1 token)          │  │
+│                           └──────────────────────────────────┘  │
+│                                          │                       │
+│                                          │ spending              │
+│                                          ▼                       │
+│                           ┌──────────────────────────────────┐  │
+│                           │       Identity Validator          │  │
+│                           │                                    │  │
+│                           │  Actions:                          │  │
+│                           │  • ChangeOwner(new_owner)          │  │
+│                           │  • AddDelegate(type, addr, valid)  │  │
+│                           │  • RevokeDelegate(type, addr)      │  │
+│                           │  • SetAttribute(name, val, valid)  │  │
+│                           │  • RevokeAttribute(name, val)      │  │
+│                           └──────────────────────────────────┘  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-The decentralized identity contract implements EIP 1056-based identity management:
-- ✅ Blockchain addresses as identity identifiers
-- ✅ Ownership control through cryptographic signatures
-- ✅ Delegate authorization with time-limited validity
-- ✅ Message verification for secure operations
-- ❌ No centralized identity storage or control
+### UTXO-per-Identity Model
 
-This design ensures that identity management remains decentralized while providing flexible delegation and ownership transfer capabilities.
+Each identity is represented by a single UTXO containing:
 
-## 🔄 Contract Workflow
+1. **Identity NFT**: A unique, non-fungible token that identifies this identity
+2. **Identity Datum**: The current state including owner, delegates, and attributes
+3. **Min ADA**: Minimum ADA required for the UTXO
 
-### Step 1: Identity Generation
-The contract enables:
-- Any blockchain address automatically serves as an identity
-- No explicit registration required for basic identity creation
-- Address owner has full control over identity management
-- Identity exists as long as address exists on blockchain
+State changes result in consuming the old UTXO and creating a new one with updated datum.
 
-### Step 2: Ownership Management
-For identity control:
-- Current owner can transfer ownership to new address
-- Ownership changes require cryptographically signed transactions
-- New owner gains full control over identity management
-- Previous owner loses all privileges upon transfer
+## 📂 Project Structure
 
-### Step 3: Delegate Authorization
-Delegation features include:
-- Owner can create delegates with specific privileges
-- Delegates are valid for specified number of blocks
-- Different delegates can have different authorization levels
-- Automatic expiration prevents stale delegate permissions
+```
+decentralized-identity/
+├── README.md                    # This file
+├── IMPLEMENTATION_PLAN.md       # Detailed implementation plan
+├── ARCHITECTURE_DIAGRAMS.md     # System architecture diagrams
+├── onchain/
+│   └── aiken/
+│       ├── aiken.toml           # Aiken project config
+│       ├── README.md            # On-chain documentation
+│       ├── lib/
+│       │   └── types.ak         # Shared type definitions
+│       └── validators/
+│           ├── identity.ak      # Main spend validator
+│           ├── identity_nft.ak  # One-shot minting policy
+│           └── tests/
+│               └── identity_test.ak  # Unit tests
+└── offchain/
+    ├── lucid-evolution/         # TypeScript/Deno implementation
+    │   ├── deno.json
+    │   └── identity.ts
+    ├── meshjs/                  # MeshJS implementation
+    │   ├── deno.json
+    │   └── identity.ts
+    └── ccl-java/                # Java implementation
+        └── Identity.java
+```
 
-### Step 4: Verification Operations
-Identity verification through:
-- Message hashing for creating verifiable challenges
-- Signature verification for proving authorization
-- Delegate validation against current block height
-- Ownership verification through cryptographic proofs
+## 🚀 Getting Started
 
-## 📋 Contract Specification
+### Prerequisites
 
-### Parameters (defined per identity):
-- **identity**: blockchain address serving as identity identifier
-- **owner**: current owner address with full control privileges
-- **delegates**: mapping of delegate addresses to their validity periods and privileges
+- [Aiken](https://aiken-lang.org/) v1.1.17+ for smart contract compilation
+- [Deno](https://deno.land/) v1.40+ for TypeScript off-chain code
+- [JBang](https://www.jbang.dev/) for Java off-chain code (optional)
+- Access to Cardano node (via Blockfrost, Koios, or local node)
+- Test ADA from [Cardano Testnet Faucet](https://docs.cardano.org/cardano-testnet/tools/faucet/)
 
-### Actions:
-- **changeOwner**: transfer identity ownership to new address (requires owner signature)
-- **addDelegate**: authorize delegate with specific privileges for set number of blocks
-- **removeDelegate**: revoke delegate authorization before expiration
-- **validDelegate**: check if delegate has valid authorization for current block
+### Quick Start
 
-### Required Functionalities:
-- Message hashing for creating verifiable content
-- Message signature verification for authentication
-- Block height tracking for time-based delegate validity
-- Transaction revert mechanism for unauthorized operations
-- Dynamic data structures for delegate management
+1. **Build the smart contracts**:
+
+   ```bash
+   cd onchain/aiken
+   aiken build
+   aiken check
+   ```
+
+2. **Set up off-chain environment** (Lucid Evolution):
+
+   ```bash
+   cd offchain/lucid-evolution
+   deno run -A identity.ts prepare
+   ```
+
+3. **Create your first identity**:
+
+   ```typescript
+   import blueprint from "../../onchain/aiken/plutus.json" with { type: "json" };
+   import { DecentralizedIdentity } from "./identity.ts";
+
+   const identity = new DecentralizedIdentity({
+     network: "Preprod",
+     provider: "koios",
+   });
+   await identity.initialize();
+   identity.selectWalletFromSeed(seedPhrase);
+
+   const txHash = await identity.createIdentity(blueprint);
+   console.log("Identity created:", txHash);
+   ```
+
+## 📋 API Reference
+
+### On-chain Actions
+
+| Action            | Redeemer                                                           | Description                       |
+| ----------------- | ------------------------------------------------------------------ | --------------------------------- |
+| `ChangeOwner`     | `{ new_owner: ByteArray }`                                         | Transfer ownership to new address |
+| `AddDelegate`     | `{ delegate_type: ByteArray, delegate: ByteArray, validity: Int }` | Add delegate with validity period |
+| `RevokeDelegate`  | `{ delegate_type: ByteArray, delegate: ByteArray }`                | Remove delegate                   |
+| `SetAttribute`    | `{ name: ByteArray, value: ByteArray, validity: Int }`             | Set/update attribute              |
+| `RevokeAttribute` | `{ name: ByteArray, value: ByteArray }`                            | Remove attribute                  |
+
+### Off-chain Methods
+
+All implementations provide these core methods:
+
+| Method               | Parameters              | Description                    |
+| -------------------- | ----------------------- | ------------------------------ |
+| `createIdentity`     | `blueprint`             | Create new identity with NFT   |
+| `changeOwner`        | `newOwnerPkh`           | Transfer identity ownership    |
+| `addDelegate`        | `type, pkh, validity`   | Add authorized delegate        |
+| `revokeDelegate`     | `type, pkh`             | Remove delegate authorization  |
+| `setAttribute`       | `name, value, validity` | Set identity attribute         |
+| `revokeAttribute`    | `name, value`           | Remove identity attribute      |
+| `getIdentityDatum`   | -                       | Query current identity state   |
+| `getValidDelegates`  | -                       | Get currently valid delegates  |
+| `getValidAttributes` | -                       | Get currently valid attributes |
+
+### Delegate Types
+
+| Type      | Purpose          | Use Case                           |
+| --------- | ---------------- | ---------------------------------- |
+| `veriKey` | Verification Key | Off-chain signature verification   |
+| `sigAuth` | Signature Auth   | On-chain transaction authorization |
+| `enc`     | Encryption       | Key agreement/encryption           |
+
+## 🔒 Security Considerations
+
+### Authorization Model
+
+- **Owner Authority**: Only the current owner can perform any action
+- **Signature Verification**: Uses `vodka_extra_signatories` for reliable signer checks
+- **No Delegate Self-Authorization**: Delegates cannot authorize themselves for actions
+
+### Validity Checks
+
+- **Time-bound Operations**: AddDelegate and SetAttribute require validity ranges
+- **Expiration**: Delegates and attributes can expire (validity = 0 means permanent)
+- **Nonce Protection**: Every action increments nonce to prevent replay attacks
+
+### Best Practices
+
+1. **Backup Identity**: Store the UTXO reference used to create your identity
+2. **Set Validity Periods**: Use reasonable validity periods for delegates
+3. **Monitor Events**: Use chain indexers to track identity changes
+4. **Secure Keys**: Protect owner keys - ownership transfer is irreversible
+
+## 🧪 Testing
+
+### Unit Tests (Aiken)
+
+```bash
+cd onchain/aiken
+aiken check
+```
+
+Tests cover:
+
+- Token name computation
+- Delegate validity checks
+- Attribute validity checks
+- Owner resolution
+- All action types
+- Edge cases
+
+### Integration Tests (Off-chain)
+
+```bash
+# Lucid Evolution
+cd offchain/lucid-evolution
+deno run -A identity.ts test
+
+# CCL Java
+cd offchain/ccl-java
+jbang Identity.java test
+```
+
+## 📚 DID Document Resolution
+
+This implementation can serve as a foundation for DID Document resolution. Identity attributes can store:
+
+- DID Document (JSON-LD)
+- Service endpoints
+- Verification methods
+- Authentication references
+
+Example attribute for DID Document:
+
+```typescript
+await identity.setAttribute(
+  "did/document",
+  JSON.stringify({
+    "@context": ["https://www.w3.org/ns/did/v1"],
+    "id": "did:cardano:preprod:<identity-hash>",
+    "authentication": [...],
+    "service": [...]
+  }),
+  0n // Permanent
+);
+```
 
 ## 🛠️ Development Approach with Cardano
 
 ### Choosing Your Development Stack
 
-For guidance on selecting the right tools and technologies for your Cardano development needs, consult the **[Cardano Tool Compass](https://github.com/cardano-foundation/cardano-tool-compass)** - a comprehensive guide to help you navigate the Cardano development ecosystem and choose the tools that best fit your project requirements and technical preferences.
+For guidance on selecting the right tools and technologies for your Cardano development needs, consult the **[Cardano Tool Compass](https://github.com/cardano-foundation/cardano-tool-compass)** - a comprehensive guide to help you navigate the Cardano development ecosystem.
 
 ### Smart Contract Development
-Choose your preferred Cardano smart contract language and framework:
-- **Aiken**: Functional programming approach with strong cryptographic capabilities
-- **Plutus (Haskell)**: Native Cardano smart contract language with advanced identity features
-- **OpShin (Python)**: Python-based smart contract development with identity libraries
-- **Helios**: TypeScript-like syntax for Cardano contracts with DID support
+
+This implementation uses **Aiken** for smart contracts:
+
+- Modern functional programming approach
+- Strong type safety
+- Excellent tooling and testing support
+- PlutusV3 support
 
 ### Off-chain Development
-Select appropriate off-chain tools based on your tech stack:
-- **JavaScript/TypeScript**: Lucid Evolution with DID libraries, Mesh.js for identity management
-- **Java**: Cardano Client Library (CCL) with cryptographic identity support
-- **Python**: PyCardano with verifiable credential libraries
-- **Haskell**: Plutus Application Framework with native identity capabilities
 
-### Development Process
-1. **Design Phase**: Define DID methods, credential schemas, and verification protocols
-2. **Implementation**: Build smart contracts with cryptographic identity verification
-3. **Testing**: Thoroughly test identity scenarios and privacy preservation on testnets
-4. **Integration**: Develop off-chain components for user identity management
-5. **Deployment**: Deploy to Cardano mainnet after comprehensive security auditing
+Multiple off-chain implementations are provided:
+
+- **Lucid Evolution** (TypeScript/Deno) - Modern, type-safe
+- **MeshJS** (TypeScript) - Browser and Node.js compatible
+- **CCL Java** (Java) - Enterprise-friendly
+
+## 📖 References
+
+- [EIP-1056: Ethereum Lightweight Identity](https://eips.ethereum.org/EIPS/eip-1056)
+- [W3C DID Core Specification](https://www.w3.org/TR/did-core/)
+- [Aiken Documentation](https://aiken-lang.org/)
+- [Lucid Evolution](https://github.com/Anastasia-Labs/lucid-evolution)
+- [MeshJS](https://meshjs.dev/)
+- [Cardano Client Lib](https://github.com/bloxbean/cardano-client-lib)
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](../LICENSE) file for details. 4. **Integration**: Develop off-chain components for user identity management 5. **Deployment**: Deploy to Cardano mainnet after comprehensive security auditing
 
 ### Cardano-Specific Considerations
+
 - **Native Tokens**: Use Cardano native tokens for identity credentials and badges
 - **Metadata Standards**: Follow emerging DID and verifiable credential standards
 - **UTXO Model**: Design efficient identity operations using UTXO parallelization

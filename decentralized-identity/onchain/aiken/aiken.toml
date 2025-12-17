@@ -1,0 +1,23 @@
+name = "cardano-foundation/cardano-template-and-ecosystem-monitoring/decentralized-identity"
+version = "0.1.0"
+compiler = "v1.1.17"
+plutus = "v3"
+license = "Apache-2.0"
+description = "Decentralized Identity smart contract implementing EIP-1056 style identity management on Cardano"
+
+[repository]
+user = "cardano-foundation"
+project = "cardano-template-and-ecosystem-monitoring"
+platform = "github"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "v2.2.0"
+source = "github"
+
+[[dependencies]]
+name = "sidan-lab/vodka"
+version = "0.1.15"
+source = "github"
+
+[config]
