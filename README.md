@@ -10,6 +10,7 @@ This repository is divided into directories based on use cases and the technolog
 - `/use-case/offchain/<framework>/`: Contains the off-chain implementation of the same use case using a specific framework (e.g. meshjs, lucid-evolution, cardano-client-lib, etc.).
 
 For example:
+
 - `/payment-splitter/onchain/aiken/`
 - `/payment-splitter/offchain/meshjs/`
 
@@ -19,26 +20,26 @@ The use cases implemented in this repository are based on the research paper [Sm
 
 The 21 use cases identified in the research paper are as follows:
 
-1. [Bet](bet/README.md)  
-2. [Simple transfer](simple-transfer/README.md)  
+1. [Bet](bet/README.md)
+2. [Simple transfer](simple-transfer/README.md)
 3. [Token transfer](token-transfer/README.md)
-4. [HTLC](htlc/README.md)  
-5. [Escrow](escrow/README.md)  
-6. Auction  
-7. [Crowdfund](crowdfund/README.md)  
+4. [HTLC](htlc/README.md)
+5. [Escrow](escrow/README.md)
+6. Auction
+7. [Crowdfund](crowdfund/README.md)
 8. [Vault](vault/README.md)
-9. [Vesting](vesting/README.md)  
-10. Storage  
-11. Simple wallet  
-12. Price Bet  
+9. [Vesting](vesting/README.md)
+10. Storage
+11. Simple wallet
+12. Price Bet
 13. [Payment splitter](payment-splitter/README.md)
-14. Lottery  
-15. Constant-product AMM  
-16. Upgradeable Proxy  
-17. Factory  
-18. Decentralized identity  
-19. Editable NFT  
-20. Anonymous Data  
+14. Lottery
+15. Constant-product AMM
+16. Upgradeable Proxy
+17. Factory
+18. [Decentralized identity](decentralized-identity/README.md)
+19. Editable NFT
+20. Anonymous Data
 21. [Atomic Transactions](atomic-transaction/README.md)
 
 ### 🛠 Running a Use Case
