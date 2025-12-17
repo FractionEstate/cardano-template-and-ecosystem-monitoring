@@ -114,12 +114,12 @@ cd "$SCRIPT_DIR"
 if command -v deno &> /dev/null; then
   echo "   Caching Lucid Evolution dependencies..."
   cd "$SCRIPT_DIR/offchain/lucid-evolution"
-  deno cache identity.ts 2>/dev/null || true
+  deno cache identity.ts did-resolver.ts 2>/dev/null || true
   echo -e "${GREEN}   ✅ Lucid Evolution ready${NC}"
 
   echo "   Caching MeshJS dependencies..."
   cd "$SCRIPT_DIR/offchain/meshjs"
-  deno cache identity.ts 2>/dev/null || true
+  deno cache identity.ts did-resolver.ts 2>/dev/null || true
   echo -e "${GREEN}   ✅ MeshJS ready${NC}"
 else
   echo -e "${YELLOW}   ⚠️  Skipping TypeScript off-chain (Deno not installed)${NC}"

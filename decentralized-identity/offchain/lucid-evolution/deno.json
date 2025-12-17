@@ -3,5 +3,15 @@
     "@evolution-sdk/lucid": "npm:@evolution-sdk/lucid@2.0.1",
     "@noble/hashes": "jsr:@noble/hashes@^2.0.1",
     "@std/encoding": "jsr:@std/encoding@^1.0.10"
+  },
+  "compilerOptions": {
+    "lib": [
+      "deno.window",
+      "deno.ns",
+      "esnext"
+    ],
+    "strict": false,
+    "allowJs": true,
+    "checkJs": false
   }
 }

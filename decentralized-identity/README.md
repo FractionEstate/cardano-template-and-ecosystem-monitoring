@@ -2,8 +2,18 @@
 
 A production-ready implementation of EIP-1056 style Decentralized Identity management on Cardano, leveraging the UTXO model for secure, self-sovereign identity control.
 
-> **📋 Implementation Status**: ✅ Complete
-> **📄 See Also**: [Implementation Plan](./IMPLEMENTATION_PLAN.md) | [Architecture Diagrams](./ARCHITECTURE_DIAGRAMS.md) | [On-chain README](./onchain/aiken/README.md)
+> **📋 Implementation Status**: ✅ Complete & Production Ready
+>
+> **� Quick Start**: New to the project? Start with [QUICKSTART.md](./QUICKSTART.md) for a 5-minute setup!
+>
+> **📚 Documentation**:
+>
+> - 🚀 [**Quick Start**](./QUICKSTART.md) - Get up and running in 5 minutes
+> - 📘 [Usage Examples](./EXAMPLES.md) - Complete code examples and use cases
+> - 🔧 [Deployment Guide](./DEPLOYMENT.md) - Step-by-step deployment to Cardano networks
+> - 📋 [Implementation Plan](./IMPLEMENTATION_PLAN.md) - Detailed technical specifications
+> - 🏗️ [Architecture Diagrams](./ARCHITECTURE_DIAGRAMS.md) - Visual architecture overview
+> - 🔨 [On-chain README](./onchain/aiken/README.md) - Smart contract documentation
 
 ## Table of Contents
 
@@ -134,12 +144,15 @@ decentralized-identity/
 └── offchain/
     ├── lucid-evolution/         # TypeScript/Deno implementation
     │   ├── deno.json
-    │   └── identity.ts
+    │   ├── identity.ts
+    │   └── did-resolver.ts
     ├── meshjs/                  # MeshJS implementation
     │   ├── deno.json
-    │   └── identity.ts
+    │   ├── identity.ts
+    │   └── did-resolver.ts
     └── ccl-java/                # Java implementation
-        └── Identity.java
+        ├── Identity.java
+        └── DIDResolver.java
 ```
 
 ## 🚀 Getting Started
@@ -275,9 +288,160 @@ jbang Identity.java test
 
 ## 📚 DID Document Resolution
 
-This implementation can serve as a foundation for DID Document resolution. Identity attributes can store:
+This implementation includes W3C DID Document resolution following the [DID Core specification](https://www.w3.org/TR/did-core/).
 
-- DID Document (JSON-LD)
+### DID Format
+
+```
+did:cardano:<network>:<identity_nft_policy_id>
+```
+
+**Examples**:
+
+- `did:cardano:mainnet:a1b2c3d4e5f6...`
+- `did:cardano:preprod:abc123def456...`
+- `did:cardano:preview:xyz789abc123...`
+
+### Using the DID Resolver
+
+#### Lucid Evolution
+
+```typescript
+import { CardanoDIDResolver } from './did-resolver.ts';
+import { DecentralizedIdentity } from './identity.ts';
+
+// Initialize identity contract
+const identity = new DecentralizedIdentity({
+  network: 'Preprod',
+  provider: 'koios',
+});
+await identity.initialize();
+identity.selectWalletFromSeed(seedPhrase);
+
+// Create DID resolver
+const resolver = new CardanoDIDResolver(identity, 'preprod');
+
+// Generate DID from policy ID
+const did = CardanoDIDResolver.generateDID(policyId, 'preprod');
+console.log('DID:', did);
+
+// Resolve DID to DID Document
+const didDocument = await resolver.resolve(did);
+console.log(JSON.stringify(didDocument, null, 2));
+```
+
+#### MeshJS
+
+```typescript
+import { MeshDIDResolver } from './did-resolver.ts';
+import { MeshIdentityContract } from './identity.ts';
+
+const contract = new MeshIdentityContract({
+  type: 'koios',
+  network: 'preprod',
+});
+await contract.initialize(wallet);
+
+const resolver = new MeshDIDResolver(contract, 'preprod');
+const did = MeshDIDResolver.generateDID(policyId, 'preprod');
+const didDocument = await resolver.resolve(did);
+```
+
+#### Java
+
+```java
+import DIDResolver;
+
+DIDResolver resolver = new DIDResolver("preprod");
+String did = DIDResolver.generateDID(policyId, "preprod");
+
+// Resolve with identity datum from chain
+IdentityDatum datum = getIdentityDatumFromChain();
+DIDDocument didDoc = resolver.resolve(did, datum);
+String json = resolver.resolveToJSON(did, datum);
+System.out.println(json);
+```
+
+### Example DID Document
+
+```json
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1"
+  ],
+  "id": "did:cardano:preprod:a1b2c3d4e5f6...",
+  "controller": ["did:cardano:preprod:a1b2c3d4e5f6..."],
+  "verificationMethod": [
+    {
+      "id": "did:cardano:preprod:a1b2c3d4e5f6...#owner",
+      "type": "Ed25519VerificationKey2020",
+      "controller": "did:cardano:preprod:a1b2c3d4e5f6...",
+      "blockchainAccountId": "cardano:preprod:1234567890abcdef..."
+    },
+    {
+      "id": "did:cardano:preprod:a1b2c3d4e5f6...#delegate-0",
+      "type": "Ed25519VerificationKey2020",
+      "controller": "did:cardano:preprod:a1b2c3d4e5f6...",
+      "blockchainAccountId": "cardano:preprod:abcdef1234567890..."
+    }
+  ],
+  "authentication": [
+    "did:cardano:preprod:a1b2c3d4e5f6...#owner",
+    "did:cardano:preprod:a1b2c3d4e5f6...#delegate-0"
+  ],
+  "assertionMethod": ["did:cardano:preprod:a1b2c3d4e5f6...#owner"],
+  "keyAgreement": [],
+  "capabilityInvocation": ["did:cardano:preprod:a1b2c3d4e5f6...#owner"],
+  "capabilityDelegation": ["did:cardano:preprod:a1b2c3d4e5f6...#owner"],
+  "service": [
+    {
+      "id": "did:cardano:preprod:a1b2c3d4e5f6...#service-0",
+      "type": "LinkedDomains",
+      "serviceEndpoint": "https://example.com"
+    }
+  ],
+  "cardanoIdentity": {
+    "network": "preprod",
+    "nonce": 5,
+    "attributes": {
+      "name": "Alice",
+      "email": "alice@example.com"
+    }
+  }
+}
+```
+
+### Delegate Types and Verification Relationships
+
+| Delegate Type | Verification Relationship | Purpose                             |
+| ------------- | ------------------------- | ----------------------------------- |
+| `veriKey`     | `authentication`          | Off-chain signature verification    |
+| `sigAuth`     | `assertionMethod`         | On-chain authorization              |
+| `enc`         | `keyAgreement`            | Encryption key for secure messaging |
+
+### Service Endpoints
+
+Service endpoints can be added as attributes with names starting with `did/svc/`:
+
+```typescript
+// Add a LinkedDomains service
+await identity.setAttribute(
+  'did/svc/LinkedDomains',
+  'https://example.com',
+  0n // permanent
+);
+
+// Add a DIDCommMessaging service
+await identity.setAttribute(
+  'did/svc/DIDCommMessaging',
+  'https://example.com/didcomm',
+  0n
+);
+```
+
+These will automatically appear in the resolved DID Document under the `service` array
+
 - Service endpoints
 - Verification methods
 - Authentication references

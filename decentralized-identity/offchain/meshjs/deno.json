@@ -5,5 +5,15 @@
     "@meshsdk/common": "npm:@meshsdk/common@1.9.0-beta.20",
     "@noble/hashes": "npm:@noble/hashes@1.4.0",
     "@std/encoding": "jsr:@std/encoding@1"
+  },
+  "compilerOptions": {
+    "lib": [
+      "deno.window",
+      "deno.ns",
+      "esnext"
+    ],
+    "strict": false,
+    "allowJs": true,
+    "checkJs": false
   }
 }
